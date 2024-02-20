@@ -418,23 +418,29 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
     }
 
+    int ledSetClearSeq = 1000;
     public void setLightsGyro(SensorEvent event) {
         float zdir = event.values[2];
+//        int ledSetClearSeq = 0001000;
 
         if (zdir >= 1.) {
             buttons[4].setChecked(false);
             buttons[5].setChecked(false);
             buttons[6].setChecked(false);
 
-            if(buttons[1].isChecked()) {
-                buttons[0].setChecked(true);
+            if(ledSetClearSeq - 100000 > 0) {//buttons[1].isChecked()) {
+                ledSetClearSeq += 1000000;
+//                buttons[0].setChecked(true);
             }
-            else if(buttons[2].isChecked()) {
-                buttons[1].setChecked(true);
+            else if(ledSetClearSeq - 10000 > 0){//buttons[2].isChecked()) {
+                ledSetClearSeq += 100000;
+//                buttons[1].setChecked(true);
             }
             else {
-                buttons[2].setChecked(true);
+                ledSetClearSeq += 10000;
+//                buttons[2].setChecked(true);
             }
+            send(Integer.toString(ledSetClearSeq, 7));
         }
         else if (zdir <= -1) {
             buttons[2].setChecked(false);
