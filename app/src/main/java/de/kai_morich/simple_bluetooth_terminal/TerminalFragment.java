@@ -58,6 +58,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private String newline = TextUtil.newline_crlf;
     private SensorManager sensorManager;
 
+//    char[] ledSetClearSeq = {'0', '0', '0', '1', '0', '0', '0'};
+
     /*
      * Lifecycle
      */
@@ -353,128 +355,65 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             float sqrtaccel = (xdir * xdir + ydir * ydir + zdir * zdir) / (SensorManager.GRAVITY_EARTH * SensorManager.GRAVITY_EARTH);
             if (sqrtaccel >= 1.25 && sqrtaccel < 3) {
                 send("1000000");
-//                buttons[0].setChecked(true);
-//                buttons[1].setChecked(false);
-//                buttons[2].setChecked(false);
-//                buttons[3].setChecked(false);
-//                buttons[4].setChecked(false);
-//                buttons[5].setChecked(false);
-//                buttons[6].setChecked(false);
             } else if (sqrtaccel >= 3 && sqrtaccel < 6) {
                 send("1100000");
-//                buttons[0].setChecked(true);
-//                buttons[1].setChecked(true);
-//                buttons[2].setChecked(false);
-//                buttons[3].setChecked(false);
-//                buttons[4].setChecked(false);
-//                buttons[5].setChecked(false);
-//                buttons[6].setChecked(false);
             } else if (sqrtaccel >= 6 && sqrtaccel < 9) {
                 send("1110000");
-//                buttons[0].setChecked(true);
-//                buttons[1].setChecked(true);
-//                buttons[2].setChecked(true);
-//                buttons[3].setChecked(false);
-//                buttons[4].setChecked(false);
-//                buttons[5].setChecked(false);
-//                buttons[6].setChecked(false);
             } else if (sqrtaccel >= 9 && sqrtaccel < 12) {
                 send("1111000");
-//                buttons[0].setChecked(true);
-//                buttons[1].setChecked(true);
-//                buttons[2].setChecked(true);
-//                buttons[3].setChecked(true);
-//                buttons[4].setChecked(false);
-//                buttons[5].setChecked(false);
-//                buttons[6].setChecked(false);
             } else if (sqrtaccel >= 12 && sqrtaccel < 15) {
                 send("1111100");
-//                buttons[0].setChecked(true);
-//                buttons[1].setChecked(true);
-//                buttons[2].setChecked(true);
-//                buttons[3].setChecked(true);
-//                buttons[4].setChecked(true);
-//                buttons[5].setChecked(false);
-//                buttons[6].setChecked(false);
             } else if (sqrtaccel >= 15 && sqrtaccel < 18) {
                 send("1111110");
-//                buttons[0].setChecked(true);
-//                buttons[1].setChecked(true);
-//                buttons[2].setChecked(true);
-//                buttons[3].setChecked(true);
-//                buttons[4].setChecked(true);
-//                buttons[5].setChecked(true);
-//                buttons[6].setChecked(false);
             } else if (sqrtaccel >= 18) {
                 send("1111111");
-//                buttons[0].setChecked(true);
-//                buttons[1].setChecked(true);
-//                buttons[2].setChecked(true);
-//                buttons[3].setChecked(true);
-//                buttons[4].setChecked(true);
-//                buttons[5].setChecked(true);
-//                buttons[6].setChecked(true);
             }
         }
     }
 
-    int ledSetClearSeq = 1000;
+    int[] ledSetClearSeq = {0, 0, 0, 1, 0, 0, 0};
     public void setLightsGyro(SensorEvent event) {
         float zdir = event.values[2];
-//        int ledSetClearSeq = 0001000;
 
         if (zdir >= 1.) {
-            buttons[4].setChecked(false);
-            buttons[5].setChecked(false);
-            buttons[6].setChecked(false);
+            ledSetClearSeq[4] = 0;
+            ledSetClearSeq[5] = 0;
+            ledSetClearSeq[6] = 0;
 
-            if(ledSetClearSeq - 100000 > 0) {//buttons[1].isChecked()) {
-                ledSetClearSeq += 1000000;
-//                buttons[0].setChecked(true);
+            if(ledSetClearSeq[1] == 1) {
+                ledSetClearSeq[0] = 1;
             }
-            else if(ledSetClearSeq - 10000 > 0){//buttons[2].isChecked()) {
-                ledSetClearSeq += 100000;
-//                buttons[1].setChecked(true);
+            else if(ledSetClearSeq[2] == 1){
+                ledSetClearSeq[1] = 1;
             }
             else {
-                ledSetClearSeq += 10000;
-//                buttons[2].setChecked(true);
+                ledSetClearSeq[2] = 1;
             }
-            send(Integer.toString(ledSetClearSeq, 7));
+            send(Arrays.toString(ledSetClearSeq));
         }
         else if (zdir <= -1) {
-            buttons[2].setChecked(false);
-            buttons[1].setChecked(false);
-            buttons[0].setChecked(false);
-            if(buttons[5].isChecked()) {
-                buttons[6].setChecked(true);
+            ledSetClearSeq[2] = 0;
+            ledSetClearSeq[1] = 0;
+            ledSetClearSeq[0] = 0;
+
+            if(ledSetClearSeq[5] == 1) {
+                ledSetClearSeq[6] = 1;
             }
-            else if(buttons[4].isChecked()) {
-                buttons[5].setChecked(true);
+            else if(ledSetClearSeq[4] == 1) {
+                ledSetClearSeq[5] = 1;
             }
             else {
-                buttons[4].setChecked(true);
+                ledSetClearSeq[4] = 1;
             }
+            send(Arrays.toString(ledSetClearSeq));
         }
     }
 
     public void setLightsProx(SensorEvent event) {
         if (event.values[0] < 5.0f) {
-            buttons[0].setChecked(true);
-            buttons[1].setChecked(true);
-            buttons[2].setChecked(true);
-            buttons[3].setChecked(true);
-            buttons[4].setChecked(true);
-            buttons[5].setChecked(true);
-            buttons[6].setChecked(true);
+            send("1111111");
         } else {
-            buttons[0].setChecked(false);
-            buttons[1].setChecked(false);
-            buttons[2].setChecked(false);
-            buttons[3].setChecked(false);
-            buttons[4].setChecked(false);
-            buttons[5].setChecked(false);
-            buttons[6].setChecked(false);
+            send("0000000");
         }
     }
     @Override
