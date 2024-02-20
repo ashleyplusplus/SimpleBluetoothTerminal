@@ -1,5 +1,6 @@
 package de.kai_morich.simple_bluetooth_terminal;
 
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -9,6 +10,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -25,6 +28,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -33,7 +40,7 @@ import androidx.fragment.app.Fragment;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 
-public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener {
+public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener, SensorEventListener {
 
     private enum Connected { False, Pending, True }
 
@@ -49,6 +56,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean hexEnabled = false;
     private boolean pendingNewline = false;
     private String newline = TextUtil.newline_crlf;
+    private SensorManager sensorManager;
 
     /*
      * Lifecycle
@@ -59,6 +67,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         setHasOptionsMenu(true);
         setRetainInstance(true);
         deviceAddress = getArguments().getString("device");
+        sensorManager = (SensorManager) this.getContext().getSystemService(Context.SENSOR_SERVICE);
     }
 
     @Override
@@ -66,6 +75,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if (connected != Connected.False)
             disconnect();
         getActivity().stopService(new Intent(getActivity(), SerialService.class));
+        sensorManager.unregisterListener(this);
         super.onDestroy();
     }
 
@@ -105,6 +115,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             initialStart = false;
             getActivity().runOnUiThread(this::connect);
         }
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
@@ -327,6 +340,154 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onSerialIoError(Exception e) {
         status("connection lost: " + e.getMessage());
         disconnect();
+    }
+
+    long lastUpdateTime = System.currentTimeMillis();
+    public void setLightsAccel(SensorEvent event) {
+        long currentTime = System.currentTimeMillis();
+        if(currentTime - lastUpdateTime > 300) {
+            lastUpdateTime = currentTime;
+            float xdir = event.values[0];
+            float ydir = event.values[1];
+            float zdir = event.values[2];
+            float sqrtaccel = (xdir * xdir + ydir * ydir + zdir * zdir) / (SensorManager.GRAVITY_EARTH * SensorManager.GRAVITY_EARTH);
+            if (sqrtaccel >= 1.25 && sqrtaccel < 3) {
+                send("1000000");
+//                buttons[0].setChecked(true);
+//                buttons[1].setChecked(false);
+//                buttons[2].setChecked(false);
+//                buttons[3].setChecked(false);
+//                buttons[4].setChecked(false);
+//                buttons[5].setChecked(false);
+//                buttons[6].setChecked(false);
+            } else if (sqrtaccel >= 3 && sqrtaccel < 6) {
+                send("1100000");
+//                buttons[0].setChecked(true);
+//                buttons[1].setChecked(true);
+//                buttons[2].setChecked(false);
+//                buttons[3].setChecked(false);
+//                buttons[4].setChecked(false);
+//                buttons[5].setChecked(false);
+//                buttons[6].setChecked(false);
+            } else if (sqrtaccel >= 6 && sqrtaccel < 9) {
+                send("1110000");
+//                buttons[0].setChecked(true);
+//                buttons[1].setChecked(true);
+//                buttons[2].setChecked(true);
+//                buttons[3].setChecked(false);
+//                buttons[4].setChecked(false);
+//                buttons[5].setChecked(false);
+//                buttons[6].setChecked(false);
+            } else if (sqrtaccel >= 9 && sqrtaccel < 12) {
+                send("1111000");
+//                buttons[0].setChecked(true);
+//                buttons[1].setChecked(true);
+//                buttons[2].setChecked(true);
+//                buttons[3].setChecked(true);
+//                buttons[4].setChecked(false);
+//                buttons[5].setChecked(false);
+//                buttons[6].setChecked(false);
+            } else if (sqrtaccel >= 12 && sqrtaccel < 15) {
+                send("1111100");
+//                buttons[0].setChecked(true);
+//                buttons[1].setChecked(true);
+//                buttons[2].setChecked(true);
+//                buttons[3].setChecked(true);
+//                buttons[4].setChecked(true);
+//                buttons[5].setChecked(false);
+//                buttons[6].setChecked(false);
+            } else if (sqrtaccel >= 15 && sqrtaccel < 18) {
+                send("1111110");
+//                buttons[0].setChecked(true);
+//                buttons[1].setChecked(true);
+//                buttons[2].setChecked(true);
+//                buttons[3].setChecked(true);
+//                buttons[4].setChecked(true);
+//                buttons[5].setChecked(true);
+//                buttons[6].setChecked(false);
+            } else if (sqrtaccel >= 18) {
+                send("1111111");
+//                buttons[0].setChecked(true);
+//                buttons[1].setChecked(true);
+//                buttons[2].setChecked(true);
+//                buttons[3].setChecked(true);
+//                buttons[4].setChecked(true);
+//                buttons[5].setChecked(true);
+//                buttons[6].setChecked(true);
+            }
+        }
+    }
+
+    public void setLightsGyro(SensorEvent event) {
+        float zdir = event.values[2];
+
+        if (zdir >= 1.) {
+            buttons[4].setChecked(false);
+            buttons[5].setChecked(false);
+            buttons[6].setChecked(false);
+
+            if(buttons[1].isChecked()) {
+                buttons[0].setChecked(true);
+            }
+            else if(buttons[2].isChecked()) {
+                buttons[1].setChecked(true);
+            }
+            else {
+                buttons[2].setChecked(true);
+            }
+        }
+        else if (zdir <= -1) {
+            buttons[2].setChecked(false);
+            buttons[1].setChecked(false);
+            buttons[0].setChecked(false);
+            if(buttons[5].isChecked()) {
+                buttons[6].setChecked(true);
+            }
+            else if(buttons[4].isChecked()) {
+                buttons[5].setChecked(true);
+            }
+            else {
+                buttons[4].setChecked(true);
+            }
+        }
+    }
+
+    public void setLightsProx(SensorEvent event) {
+        if (event.values[0] < 5.0f) {
+            buttons[0].setChecked(true);
+            buttons[1].setChecked(true);
+            buttons[2].setChecked(true);
+            buttons[3].setChecked(true);
+            buttons[4].setChecked(true);
+            buttons[5].setChecked(true);
+            buttons[6].setChecked(true);
+        } else {
+            buttons[0].setChecked(false);
+            buttons[1].setChecked(false);
+            buttons[2].setChecked(false);
+            buttons[3].setChecked(false);
+            buttons[4].setChecked(false);
+            buttons[5].setChecked(false);
+            buttons[6].setChecked(false);
+        }
+    }
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            setLightsAccel(event);
+        }
+        else if(event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            setLightsGyro(event);
+        }
+        else if(event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
+            setLightsProx(event);
+        }
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
     }
 
 }
