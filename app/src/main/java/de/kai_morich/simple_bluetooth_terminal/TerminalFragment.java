@@ -26,6 +26,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -59,6 +60,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private String newline = TextUtil.newline_crlf;
     private SensorManager sensorManager;
     RadioButton[] buttons = new RadioButton[7];
+    private enum Mode {Accel, Gyro, Prox};
+    private Mode mode;
+
     /*
      * Lifecycle
      */
@@ -68,14 +72,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         setHasOptionsMenu(true);
         setRetainInstance(true);
         deviceAddress = getArguments().getString("device");
-        sensorManager = (SensorManager) this.getContext().getSystemService(Context.SENSOR_SERVICE);
-        buttons[0] = (RadioButton) this.getView().findViewById(R.id.radioButton1);
-        buttons[1] = (RadioButton) this.getView().findViewById(R.id.radioButton2);
-        buttons[2] = (RadioButton) this.getView().findViewById(R.id.radioButton3);
-        buttons[3] = (RadioButton) this.getView().findViewById(R.id.radioButton4);
-        buttons[4] = (RadioButton) this.getView().findViewById(R.id.radioButton5);
-        buttons[5] = (RadioButton) this.getView().findViewById(R.id.radioButton6);
-        buttons[6] = (RadioButton) this.getView().findViewById(R.id.radioButton7);
+        sensorManager = (SensorManager) getContext().getSystemService(Activity.SENSOR_SERVICE);
     }
 
     @Override
@@ -123,9 +120,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             initialStart = false;
             getActivity().runOnUiThread(this::connect);
         }
-        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
+//        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
+//        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
+//        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
@@ -161,6 +158,23 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         View sendBtn = view.findViewById(R.id.send_btn);
         sendBtn.setOnClickListener(v -> send(sendText.getText().toString()));
+
+        Button accelBtn = view.findViewById(R.id.accel);
+        accelBtn.setOnClickListener(v -> onAccelClick());
+
+        Button gyroBtn = view.findViewById(R.id.gyro);
+        gyroBtn.setOnClickListener(v -> onGyroClick());
+
+        Button proxBtn = view.findViewById(R.id.prox);
+        proxBtn.setOnClickListener(v -> onProxClick());
+
+        buttons[0] = (RadioButton) view.findViewById(R.id.radioButton1);
+        buttons[1] = (RadioButton) view.findViewById(R.id.radioButton2);
+        buttons[2] = (RadioButton) view.findViewById(R.id.radioButton3);
+        buttons[3] = (RadioButton) view.findViewById(R.id.radioButton4);
+        buttons[4] = (RadioButton) view.findViewById(R.id.radioButton5);
+        buttons[5] = (RadioButton) view.findViewById(R.id.radioButton6);
+        buttons[6] = (RadioButton) view.findViewById(R.id.radioButton7);
         return view;
     }
 
@@ -350,6 +364,46 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         disconnect();
     }
 
+    public void onAccelClick() {
+        sensorManager.unregisterListener(this);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
+        mode = Mode.Accel;
+        buttons[0].setChecked(false);
+        buttons[1].setChecked(false);
+        buttons[2].setChecked(false);
+        buttons[3].setChecked(false);
+        buttons[4].setChecked(false);
+        buttons[5].setChecked(false);
+        buttons[6].setChecked(false);
+        send("0000000");
+    }
+    public void onGyroClick() {
+        sensorManager.unregisterListener(this);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
+        mode = Mode.Gyro;
+        buttons[0].setChecked(false);
+        buttons[1].setChecked(false);
+        buttons[2].setChecked(false);
+        buttons[3].setChecked(true);
+        buttons[4].setChecked(false);
+        buttons[5].setChecked(false);
+        buttons[6].setChecked(false);
+        send("0001000");
+    }
+    public void onProxClick() {
+        sensorManager.unregisterListener(this);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
+        mode = Mode.Prox;
+        buttons[0].setChecked(false);
+        buttons[1].setChecked(false);
+        buttons[2].setChecked(false);
+        buttons[3].setChecked(false);
+        buttons[4].setChecked(false);
+        buttons[5].setChecked(false);
+        buttons[6].setChecked(false);
+        send("0000000");
+    }
+
     long lastUpdateTime = System.currentTimeMillis();
     public void setLightsAccel(SensorEvent event) {
         long currentTime = System.currentTimeMillis();
@@ -507,16 +561,15 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+        if(mode == Mode.Accel && event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             setLightsAccel(event);
         }
-        else if(event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+        else if(mode == Mode.Gyro && event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
             setLightsGyro(event);
         }
-        else if(event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
+        else if(mode == Mode.Prox && event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
             setLightsProx(event);
         }
-
     }
 
     @Override
