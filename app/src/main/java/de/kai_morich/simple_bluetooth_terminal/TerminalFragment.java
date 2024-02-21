@@ -26,6 +26,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.hardware.Sensor;
@@ -57,9 +58,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean pendingNewline = false;
     private String newline = TextUtil.newline_crlf;
     private SensorManager sensorManager;
-
-//    char[] ledSetClearSeq = {'0', '0', '0', '1', '0', '0', '0'};
-
+    RadioButton[] buttons = new RadioButton[7];
     /*
      * Lifecycle
      */
@@ -70,6 +69,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         setRetainInstance(true);
         deviceAddress = getArguments().getString("device");
         sensorManager = (SensorManager) this.getContext().getSystemService(Context.SENSOR_SERVICE);
+        buttons[0] = (RadioButton) this.getView().findViewById(R.id.radioButton1);
+        buttons[1] = (RadioButton) this.getView().findViewById(R.id.radioButton2);
+        buttons[2] = (RadioButton) this.getView().findViewById(R.id.radioButton3);
+        buttons[3] = (RadioButton) this.getView().findViewById(R.id.radioButton4);
+        buttons[4] = (RadioButton) this.getView().findViewById(R.id.radioButton5);
+        buttons[5] = (RadioButton) this.getView().findViewById(R.id.radioButton6);
+        buttons[6] = (RadioButton) this.getView().findViewById(R.id.radioButton7);
     }
 
     @Override
@@ -354,18 +360,67 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             float zdir = event.values[2];
             float sqrtaccel = (xdir * xdir + ydir * ydir + zdir * zdir) / (SensorManager.GRAVITY_EARTH * SensorManager.GRAVITY_EARTH);
             if (sqrtaccel >= 1.25 && sqrtaccel < 3) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(false);
+                buttons[2].setChecked(false);
+                buttons[3].setChecked(false);
+                buttons[4].setChecked(false);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
                 send("1000000");
             } else if (sqrtaccel >= 3 && sqrtaccel < 6) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(false);
+                buttons[3].setChecked(false);
+                buttons[4].setChecked(false);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
                 send("1100000");
             } else if (sqrtaccel >= 6 && sqrtaccel < 9) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(false);
+                buttons[4].setChecked(false);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
                 send("1110000");
             } else if (sqrtaccel >= 9 && sqrtaccel < 12) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(true);
+                buttons[4].setChecked(false);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
                 send("1111000");
             } else if (sqrtaccel >= 12 && sqrtaccel < 15) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(true);
+                buttons[4].setChecked(true);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
                 send("1111100");
             } else if (sqrtaccel >= 15 && sqrtaccel < 18) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(true);
+                buttons[4].setChecked(true);
+                buttons[5].setChecked(true);
+                buttons[6].setChecked(false);
                 send("1111110");
             } else if (sqrtaccel >= 18) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(true);
+                buttons[4].setChecked(true);
+                buttons[5].setChecked(true);
+                buttons[6].setChecked(true);
                 send("1111111");
             }
         }
@@ -374,46 +429,80 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     int[] ledSetClearSeq = {0, 0, 0, 1, 0, 0, 0};
     public void setLightsGyro(SensorEvent event) {
         float zdir = event.values[2];
+//        char[] ledSetClearSeq = {'0', '0', '0', '1', '0', '0', '0'};
+//        int[] ledSetClearSeq = {0, 0, 0, 1, 0, 0, 0};
 
         if (zdir >= 1.) {
             ledSetClearSeq[4] = 0;
             ledSetClearSeq[5] = 0;
             ledSetClearSeq[6] = 0;
+            buttons[4].setChecked(false);
+            buttons[5].setChecked(false);
+            buttons[6].setChecked(false);
+            send(Arrays.toString(ledSetClearSeq));
 
-            if(ledSetClearSeq[1] == 1) {
+            if(buttons[1].isChecked()) {
                 ledSetClearSeq[0] = 1;
+                buttons[0].setChecked(true);
+                send(Arrays.toString(ledSetClearSeq));
             }
-            else if(ledSetClearSeq[2] == 1){
+            else if(buttons[2].isChecked()) {
                 ledSetClearSeq[1] = 1;
+                buttons[1].setChecked(true);
+                send(Arrays.toString(ledSetClearSeq));
             }
             else {
                 ledSetClearSeq[2] = 1;
+                buttons[2].setChecked(true);
+                send(Arrays.toString(ledSetClearSeq));
             }
-            send(Arrays.toString(ledSetClearSeq));
         }
         else if (zdir <= -1) {
             ledSetClearSeq[2] = 0;
             ledSetClearSeq[1] = 0;
             ledSetClearSeq[0] = 0;
+            buttons[2].setChecked(false);
+            buttons[1].setChecked(false);
+            buttons[0].setChecked(false);
+            send(Arrays.toString(ledSetClearSeq));
 
-            if(ledSetClearSeq[5] == 1) {
+            if(buttons[5].isChecked()) {
                 ledSetClearSeq[6] = 1;
+                buttons[6].setChecked(true);
+                send(Arrays.toString(ledSetClearSeq));
             }
-            else if(ledSetClearSeq[4] == 1) {
+            else if(buttons[4].isChecked()) {
                 ledSetClearSeq[5] = 1;
+                buttons[5].setChecked(true);
+                send(Arrays.toString(ledSetClearSeq));
             }
             else {
                 ledSetClearSeq[4] = 1;
+                buttons[4].setChecked(true);
+                send(Arrays.toString(ledSetClearSeq));
             }
-            send(Arrays.toString(ledSetClearSeq));
         }
     }
 
     public void setLightsProx(SensorEvent event) {
         if (event.values[0] < 5.0f) {
             send("1111111");
+            buttons[0].setChecked(true);
+            buttons[1].setChecked(true);
+            buttons[2].setChecked(true);
+            buttons[3].setChecked(true);
+            buttons[4].setChecked(true);
+            buttons[5].setChecked(true);
+            buttons[6].setChecked(true);
         } else {
             send("0000000");
+            buttons[0].setChecked(false);
+            buttons[1].setChecked(false);
+            buttons[2].setChecked(false);
+            buttons[3].setChecked(false);
+            buttons[4].setChecked(false);
+            buttons[5].setChecked(false);
+            buttons[6].setChecked(false);
         }
     }
     @Override
