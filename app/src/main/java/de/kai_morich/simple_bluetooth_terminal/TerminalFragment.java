@@ -120,9 +120,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             initialStart = false;
             getActivity().runOnUiThread(this::connect);
         }
-//        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
-//        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
-//        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
@@ -404,6 +401,14 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         send("0000000");
     }
 
+    String intArrayToConcentratedString(int[] arr) {
+        String str = "";
+        for(int num: arr) {
+            str += num;
+        }
+        return str;
+    }
+
     long lastUpdateTime = System.currentTimeMillis();
     public void setLightsAccel(SensorEvent event) {
         long currentTime = System.currentTimeMillis();
@@ -483,8 +488,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     int[] ledSetClearSeq = {0, 0, 0, 1, 0, 0, 0};
     public void setLightsGyro(SensorEvent event) {
         float zdir = event.values[2];
-//        char[] ledSetClearSeq = {'0', '0', '0', '1', '0', '0', '0'};
-//        int[] ledSetClearSeq = {0, 0, 0, 1, 0, 0, 0};
 
         if (zdir >= 1.) {
             ledSetClearSeq[4] = 0;
@@ -493,23 +496,20 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             buttons[4].setChecked(false);
             buttons[5].setChecked(false);
             buttons[6].setChecked(false);
-            send(Arrays.toString(ledSetClearSeq));
 
             if(buttons[1].isChecked()) {
                 ledSetClearSeq[0] = 1;
                 buttons[0].setChecked(true);
-                send(Arrays.toString(ledSetClearSeq));
             }
             else if(buttons[2].isChecked()) {
                 ledSetClearSeq[1] = 1;
                 buttons[1].setChecked(true);
-                send(Arrays.toString(ledSetClearSeq));
             }
             else {
                 ledSetClearSeq[2] = 1;
                 buttons[2].setChecked(true);
-                send(Arrays.toString(ledSetClearSeq));
             }
+            send(intArrayToConcentratedString(ledSetClearSeq));
         }
         else if (zdir <= -1) {
             ledSetClearSeq[2] = 0;
@@ -518,29 +518,25 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             buttons[2].setChecked(false);
             buttons[1].setChecked(false);
             buttons[0].setChecked(false);
-            send(Arrays.toString(ledSetClearSeq));
 
             if(buttons[5].isChecked()) {
                 ledSetClearSeq[6] = 1;
                 buttons[6].setChecked(true);
-                send(Arrays.toString(ledSetClearSeq));
             }
             else if(buttons[4].isChecked()) {
                 ledSetClearSeq[5] = 1;
                 buttons[5].setChecked(true);
-                send(Arrays.toString(ledSetClearSeq));
             }
             else {
                 ledSetClearSeq[4] = 1;
                 buttons[4].setChecked(true);
-                send(Arrays.toString(ledSetClearSeq));
             }
+            send(intArrayToConcentratedString(ledSetClearSeq));
         }
     }
 
     public void setLightsProx(SensorEvent event) {
         if (event.values[0] < 5.0f) {
-            send("1111111");
             buttons[0].setChecked(true);
             buttons[1].setChecked(true);
             buttons[2].setChecked(true);
@@ -548,8 +544,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             buttons[4].setChecked(true);
             buttons[5].setChecked(true);
             buttons[6].setChecked(true);
+            send("1111111");
         } else {
-            send("0000000");
             buttons[0].setChecked(false);
             buttons[1].setChecked(false);
             buttons[2].setChecked(false);
@@ -557,6 +553,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             buttons[4].setChecked(false);
             buttons[5].setChecked(false);
             buttons[6].setChecked(false);
+            send("0000000");
         }
     }
     @Override
