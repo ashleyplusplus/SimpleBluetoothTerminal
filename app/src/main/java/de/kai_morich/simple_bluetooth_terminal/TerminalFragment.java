@@ -1,5 +1,6 @@
 package de.kai_morich.simple_bluetooth_terminal;
 
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -9,6 +10,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -23,8 +26,14 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -33,7 +42,7 @@ import androidx.fragment.app.Fragment;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 
-public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener {
+public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener, SensorEventListener {
 
     private enum Connected { False, Pending, True }
 
@@ -49,6 +58,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean hexEnabled = false;
     private boolean pendingNewline = false;
     private String newline = TextUtil.newline_crlf;
+    private SensorManager sensorManager;
+    RadioButton[] buttons = new RadioButton[7];
+    private enum Mode {Accel, Gyro, Prox};
+    private Mode mode;
 
     /*
      * Lifecycle
@@ -59,6 +72,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         setHasOptionsMenu(true);
         setRetainInstance(true);
         deviceAddress = getArguments().getString("device");
+        sensorManager = (SensorManager) getContext().getSystemService(Activity.SENSOR_SERVICE);
     }
 
     @Override
@@ -66,6 +80,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if (connected != Connected.False)
             disconnect();
         getActivity().stopService(new Intent(getActivity(), SerialService.class));
+        sensorManager.unregisterListener(this);
         super.onDestroy();
     }
 
@@ -140,6 +155,23 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         View sendBtn = view.findViewById(R.id.send_btn);
         sendBtn.setOnClickListener(v -> send(sendText.getText().toString()));
+
+        Button accelBtn = view.findViewById(R.id.accel);
+        accelBtn.setOnClickListener(v -> onAccelClick());
+
+        Button gyroBtn = view.findViewById(R.id.gyro);
+        gyroBtn.setOnClickListener(v -> onGyroClick());
+
+        Button proxBtn = view.findViewById(R.id.prox);
+        proxBtn.setOnClickListener(v -> onProxClick());
+
+        buttons[0] = (RadioButton) view.findViewById(R.id.radioButton1);
+        buttons[1] = (RadioButton) view.findViewById(R.id.radioButton2);
+        buttons[2] = (RadioButton) view.findViewById(R.id.radioButton3);
+        buttons[3] = (RadioButton) view.findViewById(R.id.radioButton4);
+        buttons[4] = (RadioButton) view.findViewById(R.id.radioButton5);
+        buttons[5] = (RadioButton) view.findViewById(R.id.radioButton6);
+        buttons[6] = (RadioButton) view.findViewById(R.id.radioButton7);
         return view;
     }
 
@@ -327,6 +359,219 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onSerialIoError(Exception e) {
         status("connection lost: " + e.getMessage());
         disconnect();
+    }
+
+    public void onAccelClick() {
+        sensorManager.unregisterListener(this);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
+        mode = Mode.Accel;
+        buttons[0].setChecked(false);
+        buttons[1].setChecked(false);
+        buttons[2].setChecked(false);
+        buttons[3].setChecked(false);
+        buttons[4].setChecked(false);
+        buttons[5].setChecked(false);
+        buttons[6].setChecked(false);
+        send("0000000");
+    }
+    public void onGyroClick() {
+        sensorManager.unregisterListener(this);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
+        mode = Mode.Gyro;
+        buttons[0].setChecked(false);
+        buttons[1].setChecked(false);
+        buttons[2].setChecked(false);
+        buttons[3].setChecked(true);
+        buttons[4].setChecked(false);
+        buttons[5].setChecked(false);
+        buttons[6].setChecked(false);
+        send("0001000");
+    }
+    public void onProxClick() {
+        sensorManager.unregisterListener(this);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
+        mode = Mode.Prox;
+        buttons[0].setChecked(false);
+        buttons[1].setChecked(false);
+        buttons[2].setChecked(false);
+        buttons[3].setChecked(false);
+        buttons[4].setChecked(false);
+        buttons[5].setChecked(false);
+        buttons[6].setChecked(false);
+        send("0000000");
+    }
+
+    String intArrayToConcentratedString(int[] arr) {
+        String str = "";
+        for(int num: arr) {
+            str += num;
+        }
+        return str;
+    }
+
+    long lastUpdateTime = System.currentTimeMillis();
+    public void setLightsAccel(SensorEvent event) {
+        long currentTime = System.currentTimeMillis();
+        if(currentTime - lastUpdateTime > 300) {
+            lastUpdateTime = currentTime;
+            float xdir = event.values[0];
+            float ydir = event.values[1];
+            float zdir = event.values[2];
+            float sqrtaccel = (xdir * xdir + ydir * ydir + zdir * zdir) / (SensorManager.GRAVITY_EARTH * SensorManager.GRAVITY_EARTH);
+            if (sqrtaccel >= 1.25 && sqrtaccel < 3) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(false);
+                buttons[2].setChecked(false);
+                buttons[3].setChecked(false);
+                buttons[4].setChecked(false);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
+                send("1000000");
+            } else if (sqrtaccel >= 3 && sqrtaccel < 6) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(false);
+                buttons[3].setChecked(false);
+                buttons[4].setChecked(false);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
+                send("1100000");
+            } else if (sqrtaccel >= 6 && sqrtaccel < 9) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(false);
+                buttons[4].setChecked(false);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
+                send("1110000");
+            } else if (sqrtaccel >= 9 && sqrtaccel < 12) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(true);
+                buttons[4].setChecked(false);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
+                send("1111000");
+            } else if (sqrtaccel >= 12 && sqrtaccel < 15) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(true);
+                buttons[4].setChecked(true);
+                buttons[5].setChecked(false);
+                buttons[6].setChecked(false);
+                send("1111100");
+            } else if (sqrtaccel >= 15 && sqrtaccel < 18) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(true);
+                buttons[4].setChecked(true);
+                buttons[5].setChecked(true);
+                buttons[6].setChecked(false);
+                send("1111110");
+            } else if (sqrtaccel >= 18) {
+                buttons[0].setChecked(true);
+                buttons[1].setChecked(true);
+                buttons[2].setChecked(true);
+                buttons[3].setChecked(true);
+                buttons[4].setChecked(true);
+                buttons[5].setChecked(true);
+                buttons[6].setChecked(true);
+                send("1111111");
+            }
+        }
+    }
+
+    int[] ledSetClearSeq = {0, 0, 0, 1, 0, 0, 0};
+    public void setLightsGyro(SensorEvent event) {
+        float zdir = event.values[2];
+
+        if (zdir >= 1.) {
+            ledSetClearSeq[4] = 0;
+            ledSetClearSeq[5] = 0;
+            ledSetClearSeq[6] = 0;
+            buttons[4].setChecked(false);
+            buttons[5].setChecked(false);
+            buttons[6].setChecked(false);
+
+            if(buttons[1].isChecked()) {
+                ledSetClearSeq[0] = 1;
+                buttons[0].setChecked(true);
+            }
+            else if(buttons[2].isChecked()) {
+                ledSetClearSeq[1] = 1;
+                buttons[1].setChecked(true);
+            }
+            else {
+                ledSetClearSeq[2] = 1;
+                buttons[2].setChecked(true);
+            }
+            send(intArrayToConcentratedString(ledSetClearSeq));
+        }
+        else if (zdir <= -1) {
+            ledSetClearSeq[2] = 0;
+            ledSetClearSeq[1] = 0;
+            ledSetClearSeq[0] = 0;
+            buttons[2].setChecked(false);
+            buttons[1].setChecked(false);
+            buttons[0].setChecked(false);
+
+            if(buttons[5].isChecked()) {
+                ledSetClearSeq[6] = 1;
+                buttons[6].setChecked(true);
+            }
+            else if(buttons[4].isChecked()) {
+                ledSetClearSeq[5] = 1;
+                buttons[5].setChecked(true);
+            }
+            else {
+                ledSetClearSeq[4] = 1;
+                buttons[4].setChecked(true);
+            }
+            send(intArrayToConcentratedString(ledSetClearSeq));
+        }
+    }
+
+    public void setLightsProx(SensorEvent event) {
+        if (event.values[0] < 5.0f) {
+            buttons[0].setChecked(true);
+            buttons[1].setChecked(true);
+            buttons[2].setChecked(true);
+            buttons[3].setChecked(true);
+            buttons[4].setChecked(true);
+            buttons[5].setChecked(true);
+            buttons[6].setChecked(true);
+            send("1111111");
+        } else {
+            buttons[0].setChecked(false);
+            buttons[1].setChecked(false);
+            buttons[2].setChecked(false);
+            buttons[3].setChecked(false);
+            buttons[4].setChecked(false);
+            buttons[5].setChecked(false);
+            buttons[6].setChecked(false);
+            send("0000000");
+        }
+    }
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if(mode == Mode.Accel && event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            setLightsAccel(event);
+        }
+        else if(mode == Mode.Gyro && event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            setLightsGyro(event);
+        }
+        else if(mode == Mode.Prox && event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
+            setLightsProx(event);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
     }
 
 }
